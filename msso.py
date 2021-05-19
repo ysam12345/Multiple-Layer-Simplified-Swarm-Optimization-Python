@@ -15,20 +15,6 @@ logging.basicConfig(
 class MSSO():
     """
     A class to perform multi-layer SSO algorithm.
-
-    ...
-
-    Attributes
-    ----------
-    says_str : str
-        a formatted string to print out what the animal says
-    name : str
-        the name of the animal
-
-    Methods
-    -------
-    says(sound=None)
-        Prints the animals name and what sound it makes
     """
 
     def __init__(self, layers:int,
@@ -131,6 +117,7 @@ class MSSO():
                 self.evaluate(sol_idx, function_id=1)
             progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
             #logging.info(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
+    
     def update_variables(self, sol_idx):
         for var_idx in range(self.var_num):
             rand = random()
@@ -182,6 +169,7 @@ if __name__  == '__main__':
         [0, 100]
     ]
 
+    
     msso = MSSO(layers=1, 
                 fit_functions=[fit_function_1, fit_function_2], 
                 edge_function = edge_function,
