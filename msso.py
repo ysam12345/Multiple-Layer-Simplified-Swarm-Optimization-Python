@@ -2,6 +2,7 @@ import numpy as np
 from tqdm import tqdm
 from random import random
 from typing import Callable, List, Union
+from copy import copy
 import logging
 
 
@@ -12,7 +13,7 @@ logging.basicConfig(
 )
 
 
-class MSSO():
+class MSSO(object):
     """
     A class to perform multi-layer SSO algorithm.
     """
@@ -77,23 +78,47 @@ class MSSO():
         for sol_idx in range(self.sol_num):
             for var_idx in range(self.var_num):
                 # random init variable in range
-                rand_variable = self.get_rand_variable(var_idx)
+                rand_variable = self.get_a_rand_variable(var_idx)
                 particles[sol_idx][var_idx] = rand_variable
                 particles_best[sol_idx][var_idx] = rand_variable
         return particles, particles_best
 
-    def get_rand_variable(self, var_idx:int) -> float:
+    def get_a_rand_variable(self, var_idx:int) -> float:
         """Generate a random variable by variable range and return.
 
         Args:
             var_idx(int): The index of variable.
 
         Returns:
-            Generated random variable.
+            Generated a random variable.
 
         """
         return (self.variable_range[var_idx][1] - self.variable_range[var_idx][0]) * random() + self.variable_range[var_idx][0]
     
+    def get_rand_variables(self, fix_variables:list=[]) -> np.array:
+        """Generate random variables by variable range and check if it's accept by the edge function.
+        If it's reject by the edge function, re-generate it until it's acceptable.
+
+        Args:
+            fix_variables(list): The variable values that should be fixed when generate random variables.
+
+        Returns:
+            Generated random variables.
+
+        """
+        # let fix_variables full of None if it's a empty list.
+        if not fix_variables:
+            fix_variables = self.var_num * [None]
+
+        accepted = False
+        while not accepted:
+            variables = copy(fix_variables)
+            for i in range(self.var_num):
+                if variables[i] is None:
+                    variables[i] = self.get_a_rand_variable(i)
+            accepted = self.edge_function(variables)
+        return np.array(variables)
+
     def get_init_solutions(self, default_value = 0) -> (np.array, np.array):
         """Generate initial solutions and return.
 
@@ -110,23 +135,39 @@ class MSSO():
         progress_bar = tqdm(range(1, self.generations+1))
         for generation in progress_bar:
             # train each layer with different leader
-            #for leader in range(self.layers):
-            for sol_idx in range(self.sol_num):
-                #for layer in range(self.layers):
-                self.update_variables(sol_idx)
-                self.evaluate(sol_idx, function_id=1)
+            for layer_idx in range(self.layers):
+                for sol_idx in range(self.sol_num):
+                    self.update_variables(sol_idx, fix_var_idxs=[layer_idx])
+                    self.evaluate(sol_idx, function_id=layer_idx)
             progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
             #logging.info(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
     
-    def update_variables(self, sol_idx):
-        for var_idx in range(self.var_num):
-            rand = random()
-            if rand < self.cg: 
-                self.particles[sol_idx][var_idx] = self.particles_best[self.global_best_sol_index][var_idx]
-            elif rand < self.cp: 
-                self.particles[sol_idx][var_idx]  = self.particles_best[sol_idx][var_idx]
-            elif rand > self.cw: 
-                self.particles[sol_idx][var_idx]  = self.get_rand_variable(var_idx)
+    def update_variables(self, sol_idx:int, fix_var_idxs=[]):
+        """Update variables of a solution agent.
+
+        Args:
+            sol_idx(int): The index of solution agent.
+            fix_var_idxs(list): The index of variables that shouldn't be updated. Default is empty list.
+
+        Returns:
+            The initialized solutions and solutions_best.
+
+        """
+        rand = random()
+        if rand < self.cg: 
+            self.particles[sol_idx] = np.copy(self.particles_best[self.global_best_sol_index])
+        elif rand < self.cp: 
+            self.particles[sol_idx]  = np.copy(self.particles_best[sol_idx])
+        elif rand > self.cw:
+            # generate fix variables by fix_var_idxs
+            fix_variables = []
+            for i in range(self.var_num):
+                if i in fix_var_idxs:
+                    fix_variables.append(self.particles[sol_idx][i])
+                else:
+                    fix_variables.append(None)
+            self.particles[sol_idx]  = self.get_rand_variables()
+
     
     def evaluate(self, sol_idx, function_id=0):
         self.solutions[sol_idx] = self.fit_fucntions[function_id](self.particles[sol_idx])
@@ -162,8 +203,8 @@ if __name__  == '__main__':
             and variables[0] >= 0 \
             and variables[1] >= 0 
 
-    # x should be in range(1, 4)
-    # y should be in range(1, 6)
+    # x should be in range(0, 100)
+    # y should be in range(0, 100)
     variable_range = [
         [0, 100],
         [0, 100]
@@ -174,6 +215,6 @@ if __name__  == '__main__':
                 fit_functions=[fit_function_1, fit_function_2], 
                 edge_function = edge_function,
                 variable_range = variable_range,
-                sol_num=100, var_num=2, generations=10000,
+                sol_num=1000, var_num=2, generations=10000,
                 defult_solution_value=-1*np.inf)
     msso.train()
