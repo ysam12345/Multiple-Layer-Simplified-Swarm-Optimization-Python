@@ -137,11 +137,11 @@ class MSSO(object):
             for layer_idx in range(self.layers):
                 fix_var_idxs = [i for i in range(self.layers) if i != layer_idx]
                 for sol_idx in range(self.sol_num):
-                    self.update_variables(0, sol_idx, fix_var_idxs=fix_var_idxs)
+                    self.update_variables(layer_idx, sol_idx, fix_var_idxs=fix_var_idxs)
                     self.evaluate(layer_idx, sol_idx, function_id=layer_idx)
             progress_bar_message = f"Generation: {generation}, "
             for layer_idx in range(self.layers):
-                progress_bar_message += f"Layer {layer_idx} - Best Var: {[f'{var:.2f}' for var in self.particles_best[0][self.global_best_sol_index]]}, Best Sol: {self.solutions_best[layer_idx][self.global_best_sol_index]:.2f} "
+                progress_bar_message += f"Layer {layer_idx} - Best Var: {[f'{var:.2f}' for var in self.particles_best[layer_idx][self.global_best_sol_indexs[layer_idx]]]}, Best Sol: {self.solutions_best[layer_idx][self.global_best_sol_indexs[layer_idx]]:.2f} "
             progress_bar.set_description(progress_bar_message)
             #progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
             #logging.info(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
@@ -190,7 +190,7 @@ class MSSO(object):
             self.solutions_best[layer_idx][sol_idx] = self.solutions[layer_idx][sol_idx]
             self.particles_best[layer_idx][sol_idx] = np.copy(self.particles[layer_idx][sol_idx])
             if self.solutions[layer_idx][sol_idx] > self.solutions_best[layer_idx][self.global_best_sol_indexs[layer_idx]]:  
-                self.global_best_sol_index = sol_idx
+                self.global_best_sol_indexs[layer_idx] = sol_idx
     
 if __name__  == '__main__':
     def fit_function_1(variables:List[float]) -> float:
@@ -229,7 +229,7 @@ if __name__  == '__main__':
                 fit_functions=[fit_function_1, fit_function_2], 
                 edge_function = edge_function,
                 variable_range = variable_range,
-                sol_num=20, var_num=2, generations=100000,
-                cg=0.4, cp=0.015, cw=0.005,
+                sol_num=100, var_num=2, generations=100000,
+                #cg=0.4, cp=0.415, cw=0.420,
                 defult_solution_value=-1*np.inf)
     msso.train()
