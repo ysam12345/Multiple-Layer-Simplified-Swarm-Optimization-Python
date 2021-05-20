@@ -61,7 +61,7 @@ class MSSO(object):
         self.cg = cg
         self.cp = cp
         self.cw = cw
-        self.global_best_sol_index = 0
+        self.global_best_sol_indexs = layers * [0]
 
         self.particles, self.particles_best = self.get_init_particles()
         self.solutions, self.solutions_best = self.get_init_solutions(default_value=defult_solution_value)
@@ -73,14 +73,13 @@ class MSSO(object):
             The initialized particales and particles_best.
 
         """
-        particles = np.zeros([self.sol_num, self.var_num], dtype = float)
-        particles_best = np.zeros([self.sol_num, self.var_num], dtype = float) 
-        for sol_idx in range(self.sol_num):
-            for var_idx in range(self.var_num):
-                # random init variable in range
-                rand_variable = self.get_a_rand_variable(var_idx)
-                particles[sol_idx][var_idx] = rand_variable
-                particles_best[sol_idx][var_idx] = rand_variable
+        particles = np.zeros([self.layers, self.sol_num, self.var_num], dtype = float)
+        particles_best = np.zeros([self.layers, self.sol_num, self.var_num], dtype = float) 
+        for layer_idx in range(self.layers):
+            for sol_idx in range(self.sol_num):
+                rand_variables = self.get_rand_variables()
+                particles[layer_idx][sol_idx] = rand_variables
+                particles_best[layer_idx][sol_idx] = rand_variables
         return particles, particles_best
 
     def get_a_rand_variable(self, var_idx:int) -> float:
@@ -126,8 +125,8 @@ class MSSO(object):
             The initialized solutions and solutions_best.
 
         """
-        solutions = np.full((self.sol_num), default_value)
-        solutions_best = np.full((self.sol_num), default_value)
+        solutions = np.full((self.layers, self.sol_num), default_value)
+        solutions_best = np.full((self.layers, self.sol_num), default_value)
         return solutions, solutions_best
 
     def train(self):
@@ -136,13 +135,18 @@ class MSSO(object):
         for generation in progress_bar:
             # train each layer with different leader
             for layer_idx in range(self.layers):
+                fix_var_idxs = [i for i in range(self.layers) if i != layer_idx]
                 for sol_idx in range(self.sol_num):
-                    self.update_variables(sol_idx, fix_var_idxs=[layer_idx])
-                    self.evaluate(sol_idx, function_id=layer_idx)
-            progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
+                    self.update_variables(0, sol_idx, fix_var_idxs=fix_var_idxs)
+                    self.evaluate(layer_idx, sol_idx, function_id=layer_idx)
+            progress_bar_message = f"Generation: {generation}, "
+            for layer_idx in range(self.layers):
+                progress_bar_message += f"Layer {layer_idx} - Best Var: {[f'{var:.2f}' for var in self.particles_best[0][self.global_best_sol_index]]}, Best Sol: {self.solutions_best[layer_idx][self.global_best_sol_index]:.2f} "
+            progress_bar.set_description(progress_bar_message)
+            #progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
             #logging.info(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
     
-    def update_variables(self, sol_idx:int, fix_var_idxs=[]):
+    def update_variables(self, layer_idx:int, sol_idx:int, fix_var_idxs=[]):
         """Update variables of a solution agent.
 
         Args:
@@ -154,28 +158,38 @@ class MSSO(object):
 
         """
         rand = random()
+        # generate fix variables by fix_var_idxs
+        fix_variables = []
+        for var_idx in range(self.var_num):
+            if var_idx in fix_var_idxs:
+                fix_variables.append(self.particles[layer_idx][sol_idx][var_idx])
+            else:
+                fix_variables.append(None)
         if rand < self.cg: 
-            self.particles[sol_idx] = np.copy(self.particles_best[self.global_best_sol_index])
+            self.particles[layer_idx][sol_idx] = np.copy(self.particles_best[layer_idx][self.global_best_sol_indexs[layer_idx]])
+            for var_idx in range(self.var_num):
+                if var_idx not in fix_var_idxs:
+                    self.particles[layer_idx][sol_idx][var_idx] = self.particles_best[layer_idx][self.global_best_sol_indexs[layer_idx]][var_idx]
+            if not self.edge_function(self.particles[layer_idx][sol_idx]):
+                self.particles[layer_idx][sol_idx] = self.get_rand_variables(fix_variables=fix_variables)
         elif rand < self.cp: 
-            self.particles[sol_idx]  = np.copy(self.particles_best[sol_idx])
+            #self.particles[layer_idx][sol_idx]  = np.copy(self.particles_best[layer_idx][sol_idx])
+            for var_idx in range(self.var_num):
+                if var_idx not in fix_var_idxs:
+                    self.particles[layer_idx][sol_idx][var_idx] = self.particles_best[layer_idx][sol_idx][var_idx]
+            if not self.edge_function(self.particles[layer_idx][sol_idx]):
+                self.particles[layer_idx][sol_idx] = self.get_rand_variables(fix_variables=fix_variables)
         elif rand > self.cw:
-            # generate fix variables by fix_var_idxs
-            fix_variables = []
-            for i in range(self.var_num):
-                if i in fix_var_idxs:
-                    fix_variables.append(self.particles[sol_idx][i])
-                else:
-                    fix_variables.append(None)
-            self.particles[sol_idx]  = self.get_rand_variables()
+            self.particles[layer_idx][sol_idx]  = self.get_rand_variables(fix_variables=fix_variables)
 
     
-    def evaluate(self, sol_idx, function_id=0):
-        self.solutions[sol_idx] = self.fit_fucntions[function_id](self.particles[sol_idx])
+    def evaluate(self, layer_idx:int, sol_idx:int, function_id:int=0):
+        self.solutions[layer_idx][sol_idx] = self.fit_fucntions[function_id](self.particles[layer_idx][sol_idx])
         # find max
-        if self.solutions[sol_idx] > self.solutions_best[sol_idx]:
-            self.solutions_best[sol_idx] = self.solutions[sol_idx]
-            self.particles_best[sol_idx] = np.copy(self.particles[sol_idx])
-            if self.solutions[sol_idx] < self.solutions_best[self.global_best_sol_index]:  
+        if self.solutions[layer_idx][sol_idx] > self.solutions_best[layer_idx][sol_idx]:
+            self.solutions_best[layer_idx][sol_idx] = self.solutions[layer_idx][sol_idx]
+            self.particles_best[layer_idx][sol_idx] = np.copy(self.particles[layer_idx][sol_idx])
+            if self.solutions[layer_idx][sol_idx] > self.solutions_best[layer_idx][self.global_best_sol_indexs[layer_idx]]:  
                 self.global_best_sol_index = sol_idx
     
 if __name__  == '__main__':
@@ -211,10 +225,11 @@ if __name__  == '__main__':
     ]
 
     
-    msso = MSSO(layers=1, 
+    msso = MSSO(layers=2, 
                 fit_functions=[fit_function_1, fit_function_2], 
                 edge_function = edge_function,
                 variable_range = variable_range,
-                sol_num=1000, var_num=2, generations=10000,
+                sol_num=20, var_num=2, generations=100000,
+                cg=0.4, cp=0.015, cw=0.005,
                 defult_solution_value=-1*np.inf)
     msso.train()
