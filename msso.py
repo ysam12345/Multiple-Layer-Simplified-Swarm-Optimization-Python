@@ -141,9 +141,10 @@ class MSSO(object):
                 for sol_idx in range(self.sol_num):
                     # update and evaluate particles best for each solution agent
                     self.update_variables(sol_idx, fix_var_idxs=fix_var_idxs)
-                    self.evaluate_particles_best(sol_idx, function_id=layer_idx)
+                    
             # calucation global best after update all variable and particles best
             for sol_idx in range(self.sol_num):
+                self.evaluate_particles_best(sol_idx)
                 self.evaluate_global_best(sol_idx, leader_id=self.leader_id)
             progress_bar_message = f"Generation: {generation}, Best Var: {[f'{var:.2f}' for var in self.particles_best[self.global_best_sol_indexs]]}, Best Sol: {self.solutions_best[self.global_best_sol_indexs]:.2f}"
             progress_bar.set_description(progress_bar_message)
@@ -177,12 +178,14 @@ class MSSO(object):
             self.particles[sol_idx]  = self.get_rand_variables(fix_variables=fix_variables)
 
     
-    def evaluate_particles_best(self, sol_idx:int, function_id:int=0):
-        self.solutions[sol_idx] = self.fit_fucntions[function_id](self.particles[sol_idx])
-        # find max
-        if self.solutions[sol_idx] > self.solutions_best[sol_idx]:
-            self.solutions_best[sol_idx] = self.solutions[sol_idx]
-            self.particles_best[sol_idx] = np.copy(self.particles[sol_idx])
+    def evaluate_particles_best(self, sol_idx:int):
+        for function_id in range(len(self.fit_fucntions)):
+            self.solutions[sol_idx] = self.fit_fucntions[function_id](self.particles[sol_idx])
+            # find max
+            if self.solutions[sol_idx] > self.solutions_best[sol_idx]:
+                self.solutions_best[sol_idx] = self.solutions[sol_idx]
+                self.particles_best[sol_idx] = np.copy(self.particles[sol_idx])
+                
 
     def evaluate_global_best(self, sol_idx:int, leader_id:int):
         self.solutions[sol_idx] = self.fit_fucntions[leader_id](self.particles[sol_idx])
