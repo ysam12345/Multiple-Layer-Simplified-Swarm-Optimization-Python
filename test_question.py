@@ -47,7 +47,7 @@ if __name__  == '__main__':
     ]
 
     
-    msso = MSSO(layers=2, 
+    msso = MSSO(layers=2, leader_id=1, 
                 fit_functions=[fit_function_1, fit_function_2], 
                 edge_function = edge_function,
                 variable_range = variable_range,
