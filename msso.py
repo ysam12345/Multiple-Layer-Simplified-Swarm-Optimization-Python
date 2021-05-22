@@ -120,15 +120,15 @@ class MSSO(object):
             accepted = self.edge_function(variables)
         return np.array(variables)
 
-    def get_init_solutions(self, default_value = 0) -> (np.array, np.array):
+    def get_init_solutions(self, default_value:int = 0) -> (np.array, np.array):
         """Generate initial solutions and return.
 
         Returns:
             The initialized solutions and solutions_best.
 
         """
-        solutions = np.full((self.sol_num), default_value)
-        solutions_best = np.full((self.sol_num), default_value)
+        solutions = np.full((len(self.fit_fucntions), self.sol_num), default_value)
+        solutions_best = np.full((len(self.fit_fucntions), self.sol_num), default_value)
         return solutions, solutions_best
 
     def train(self):
@@ -146,7 +146,9 @@ class MSSO(object):
             for sol_idx in range(self.sol_num):
                 self.evaluate_particles_best(sol_idx)
                 self.evaluate_global_best(sol_idx, leader_id=self.leader_id)
-            progress_bar_message = f"Generation: {generation}, Best Var: {[f'{var:.2f}' for var in self.particles_best[self.global_best_sol_indexs]]}, Best Sol: {self.solutions_best[self.global_best_sol_indexs]:.2f}"
+            progress_bar_message = f"Generation: {generation}, Best Var: {[f'{var:.2f}' for var in self.particles_best[self.global_best_sol_indexs]]}"
+            for layer_idx in range(self.layers):
+                progress_bar_message += f", Best Sol-{layer_idx}: {self.solutions_best[layer_idx][self.global_best_sol_indexs]:.2f}"
             progress_bar.set_description(progress_bar_message)
             #progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
             #logging.info(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_index]}, Best Solution: {self.solutions_best[self.global_best_sol_index]}")
@@ -180,16 +182,16 @@ class MSSO(object):
     
     def evaluate_particles_best(self, sol_idx:int):
         for function_id in range(len(self.fit_fucntions)):
-            self.solutions[sol_idx] = self.fit_fucntions[function_id](self.particles[sol_idx])
+            self.solutions[function_id][sol_idx] = self.fit_fucntions[function_id](self.particles[sol_idx])
             # find max
-            if self.solutions[sol_idx] > self.solutions_best[sol_idx]:
-                self.solutions_best[sol_idx] = self.solutions[sol_idx]
+            if self.solutions[function_id][sol_idx] > self.solutions_best[function_id][sol_idx]:
+                self.solutions_best[function_id][sol_idx] = self.solutions[function_id][sol_idx]
                 self.particles_best[sol_idx] = np.copy(self.particles[sol_idx])
                 
 
     def evaluate_global_best(self, sol_idx:int, leader_id:int):
-        self.solutions[sol_idx] = self.fit_fucntions[leader_id](self.particles[sol_idx])
-        if self.solutions[sol_idx] > self.solutions_best[self.global_best_sol_indexs]:  
+        self.solutions[leader_id][sol_idx] = self.fit_fucntions[leader_id](self.particles[sol_idx])
+        if self.solutions[leader_id][sol_idx] > self.solutions_best[leader_id][self.global_best_sol_indexs]:  
             self.global_best_sol_indexs = sol_idx
     
 if __name__  == '__main__':
@@ -225,11 +227,11 @@ if __name__  == '__main__':
     ]
 
     
-    msso = MSSO(layers=2, leader_id=0,
+    msso = MSSO(layers=2, leader_id=1,
                 fit_functions=[fit_function_1, fit_function_2], 
                 edge_function = edge_function,
                 variable_range = variable_range,
                 sol_num=100, var_num=2, generations=100000,
-                #cg=0.4, cp=0.415, cw=0.420,
+                cg=0.3, cp=0.5, cw=0.6,
                 defult_solution_value=-1*np.inf)
     msso.train()
