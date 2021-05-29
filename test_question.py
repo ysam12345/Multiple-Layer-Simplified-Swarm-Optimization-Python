@@ -1,7 +1,7 @@
 import numpy as np
 import logging
 from typing import List
-from msso import MSSO
+from sso import SSO
 
 
 logging.basicConfig(
@@ -47,11 +47,10 @@ if __name__  == '__main__':
     ]
 
     
-    msso = MSSO(layers=2, leader_id=1, 
-                fit_functions=[fit_function_1, fit_function_2], 
+    sso = SSO( fit_function=fit_function_2, 
                 edge_function = edge_function,
                 variable_range = variable_range,
-                sol_num=100, var_num=2, generations=100000,
-                #cg=0.4, cp=0.415, cw=0.420,
+                sol_num=20, var_num=2, generations=1000,
+                cg=0.3, cp=0.5, cw=0.6,
                 defult_solution_value=-1*np.inf)
-    msso.train()
+    sso.train()

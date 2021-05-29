@@ -23,7 +23,7 @@ class SSO(object):
                 sol_num:int, var_num:int, generations:int,
                 fixed_variables: List[float]=[],
                 cg:float=0.4, cp:float=0.7, cw:float=0.9,
-                defult_solution_value:Union[float, int]=0):
+                default_solution_value:Union[float, int]=0):
         """
         Parameters
         ----------
@@ -50,7 +50,7 @@ class SSO(object):
             The SSO update parameter. (default is 0.7)
         cw : float, optional
             The SSO update parameter. (default is 0.9)
-        defult_solution_value: int or float, optional
+        default_solution_value: int or float, optional
             The defult value of solutions. (default is 0)
         """
         self.fit_fucntion = fit_function
@@ -66,7 +66,7 @@ class SSO(object):
         
         self.global_best_sol_idx = 0
         self.particles, self.particles_best = self.get_init_particles()
-        self.solutions, self.solutions_best = self.get_init_solutions(default_value=defult_solution_value)
+        self.solutions, self.solutions_best = self.get_init_solutions(default_value=default_solution_value)
 
     def get_init_particles(self) -> (np.array, np.array):
         """Generate initial particles and return.
@@ -124,7 +124,7 @@ class SSO(object):
         return solutions, solutions_best
 
     def train(self):
-        logging.info(f'Start training')
+        logging.info(f'Start training SSO')
         progress_bar = tqdm(range(1, self.generations+1))
         for generation in progress_bar:
             for sol_idx in range(self.sol_num):
@@ -134,7 +134,8 @@ class SSO(object):
                 self.evaluate_particles_best(sol_idx)
                 self.evaluate_global_best(sol_idx)
             progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_idx]}, Best Solution: {self.solutions_best[self.global_best_sol_idx]}")
-    
+        return self.particles_best[self.global_best_sol_idx]
+
     def update_variables(self, sol_idx:int):
         """Update variables of a solution agent.
 
@@ -205,5 +206,5 @@ if __name__  == '__main__':
                 variable_range = variable_range,
                 sol_num=20, var_num=2, generations=1000,
                 cg=0.3, cp=0.5, cw=0.6,
-                defult_solution_value=-1*np.inf)
+                default_solution_value=-1*np.inf)
     sso.train()
