@@ -23,7 +23,8 @@ class SSO(object):
                 sol_num:int, var_num:int, generations:int,
                 fixed_variables: List[float]=[],
                 cg:float=0.4, cp:float=0.7, cw:float=0.9,
-                default_solution_value:Union[float, int]=0):
+                default_solution_value:Union[float, int]=0,
+                show_progreess=True):
         """
         Parameters
         ----------
@@ -52,6 +53,8 @@ class SSO(object):
             The SSO update parameter. (default is 0.9)
         default_solution_value: int or float, optional
             The defult value of solutions. (default is 0)
+        show_progreess: bool, optional
+            Wether to show tqdm progress bar. (default is True)
         """
         self.fit_fucntion = fit_function
         self.edge_function = edge_function
@@ -67,6 +70,7 @@ class SSO(object):
         self.global_best_sol_idx = 0
         self.particles, self.particles_best = self.get_init_particles()
         self.solutions, self.solutions_best = self.get_init_solutions(default_value=default_solution_value)
+        self.show_progreess = show_progreess
 
     def get_init_particles(self) -> (np.array, np.array):
         """Generate initial particles and return.
@@ -124,16 +128,21 @@ class SSO(object):
         return solutions, solutions_best
 
     def train(self):
-        logging.info(f'Start training SSO')
-        progress_bar = tqdm(range(1, self.generations+1))
-        for generation in progress_bar:
+        if self.show_progreess:
+            logging.info(f'Start training SSO')
+            progress_bar = tqdm(range(1, self.generations+1))
+            r = progress_bar
+        else:
+            r = range(1, self.generations+1)
+        for generation in r:
             for sol_idx in range(self.sol_num):
                 # update variables of each solution agent
                 self.update_variables(sol_idx)
                 #calucation particles best and global best
                 self.evaluate_particles_best(sol_idx)
                 self.evaluate_global_best(sol_idx)
-            progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_idx]}, Best Solution: {self.solutions_best[self.global_best_sol_idx]}")
+            if self.show_progreess:
+                progress_bar.set_description(f"Generation: {generation}, Best Variable: {self.particles_best[self.global_best_sol_idx]}, Best Solution: {self.solutions_best[self.global_best_sol_idx]}")
         return self.particles_best[self.global_best_sol_idx]
 
     def update_variables(self, sol_idx:int):

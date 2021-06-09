@@ -79,7 +79,8 @@ class MSSO(object):
                 #fixed_variables=[None, variables[1]],
                 fixed_variables=[None, None],
                 cg=0.3, cp=0.5, cw=0.6,
-                default_solution_value=-1*np.inf)
+                default_solution_value=-1*np.inf,
+                show_progreess=False)
         self.best_variables = sso_2.train()
 
         self.best_fitness = self.fit_fucntions[0](self.best_variables)
@@ -123,7 +124,8 @@ class MSSO(object):
                 sol_num=20, var_num=2, generations=1000,
                 fixed_variables=[None, variables[1]],
                 cg=0.3, cp=0.5, cw=0.6,
-                default_solution_value=-1*np.inf)
+                default_solution_value=-1*np.inf,
+                show_progreess=False)
             ans_1 = sso_1.train()
             sso_2 = SSO(fit_function=self.fit_fucntions[1], 
                 edge_function = edge_function,
@@ -131,7 +133,8 @@ class MSSO(object):
                 sol_num=20, var_num=2, generations=1000,
                 fixed_variables=[ans_1[0], None],
                 cg=0.3, cp=0.5, cw=0.6,
-                default_solution_value=-1*np.inf)
+                default_solution_value=-1*np.inf,
+                show_progreess=False)
             ans_2 = sso_2.train()
             fitness = self.fit_fucntions[0](ans_2)
             if fitness > self.best_fitness:
