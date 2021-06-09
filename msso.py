@@ -72,8 +72,7 @@ class MSSO(object):
         self.default_solution_value = default_solution_value
         
         self.best_variables = self.get_rand_variables()
-        """
-        sso_1 = SSO(fit_function=self.fit_fucntions[0], 
+        sso_2 = SSO(fit_function=self.fit_fucntions[1], 
                 edge_function = edge_function,
                 variable_range = variable_range,
                 sol_num=20, var_num=2, generations=1000,
@@ -81,8 +80,8 @@ class MSSO(object):
                 fixed_variables=[None, None],
                 cg=0.3, cp=0.5, cw=0.6,
                 default_solution_value=-1*np.inf)
-        self.best_variables = sso_1.train()
-        """
+        self.best_variables = sso_2.train()
+
         self.best_fitness = self.fit_fucntions[0](self.best_variables)
 
     def get_a_rand_variable(self, var_idx:int) -> float:
@@ -167,7 +166,7 @@ if __name__  == '__main__':
             and 4 * variables[0] - variables[1] <= 12 \
             and variables[0] >= 0 \
             and variables[1] >= 0 
-
+    
     # x should be in range(0, 100)
     # y should be in range(0, 100)
     variable_range = [
@@ -176,7 +175,7 @@ if __name__  == '__main__':
     ]
 
     
-    msso = MSSO(layers=1, leader_id=1, epochs=100,
+    msso = MSSO(layers=1, leader_id=1, epochs=30000,
                 fit_functions=[fit_function_1, fit_function_2],
                 edge_function = edge_function,
                 variable_range = variable_range,
